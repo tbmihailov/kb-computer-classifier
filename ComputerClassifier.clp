@@ -2,6 +2,8 @@
 ;=======Computer classifier=========
 ;======Todor Mihaylov==M24425=======
 ;===================================
+;=======KNOLEDGEBASE==COURSE========
+;===================================
 
 	
 ;=====Functions - Ask Questions=====
@@ -59,6 +61,7 @@
 		
 ;===== Fact rules========
 
+	
 ;===Computer type
 (defrule check-comp-type "Type: Laptop(L), Desktop(D), Rack(R)"
     =>
@@ -202,21 +205,21 @@
 (defrule check-for-usb "USB : yes/no"
     =>
     (if (yes-or-no-p "Does the computer have an USB? (yes/no)") then
-        (assert (extra USB)))
+        (assert (extra usb)))
     (assert (checked usb)))
 	
 ;===HDMI
 (defrule check-for-hdmi "HDMI : yes/no"
     =>
     (if (yes-or-no-p "Does the computer have a HDMI? (yes/no)") then
-        (assert (extra HDMI)))
+        (assert (extra hdmi)))
     (assert (checked hdmi)))
 
 ;===VGA
 (defrule check-for-vga "VGA : yes/no"
     =>
     (if (yes-or-no-p "Does the computer have a VGA? (yes/no)") then
-        (assert (extra VGA)))
+        (assert (extra vga)))
     (assert (checked vga)))
 	
 ;===dvdrom
@@ -226,6 +229,12 @@
         (assert (extra DVD-CD-R-RW)))
     (assert (checked dvdrom)))	
 
+;===dvdrom
+(defrule check-for-dvdrom "SecondHDD : yes/no"
+    =>
+    (if (yes-or-no-p "Does the computer have a second HDD? (yes/no)") then
+        (assert (extra extrahdd)))
+    (assert (checked extrahdd)))	
 	
 ;===COMPUTER TYPE EVALUATION RULES
 (defrule all-checked "Assert that all specifications are checked"
@@ -242,73 +251,184 @@
 	(checked vga)
 	(checked hdmi)
 	(checked dvdrom)
+	(checked extrahdd)
 	=>
 	(printout t "All checked" crlf)
 	(assert (all-checked)))
 
-
-
 ;==evaluate for docs
 (defrule evaluate-for-docs-and-browsing
+	(all-checked)
 	(or (comptype Laptop)
-		(comptype Desktop)
-		(comptype Rack))	
-		
+		(comptype Desktop))	
 	(or (frequency Low)
-		(frequency  Medium)
-		(frequency  High))	
-		
+		(frequency  Medium))	
 	(or (proccount 0-1)
-		(proccount 2-3)
-		(proccount 4+))	
-		
+		(proccount 2-3))	
+	(or (ram Low))	
+	(not (hddcapacity Low))	
+	(extra usb)
+    =>
+    (printout t "The computer is suitable for Docs and Internet" crlf)
+    (assert (type DocsAndInternet)))
+	
+;==evaluate for movies
+(defrule evaluate-for-movies
+	(all-checked)
+	(or (comptype Laptop)
+		(comptype Desktop))	
+	(or (proccount 0-1)
+		(proccount 2-3))	
 	(or (ram Low)
-		(ram Medium)
-		(ram High))	
-		
+		(ram Medium)		)	
 	(or (hddcapacity Low)
-		(hddcapacity Medium)
-		(hddcapacity High))	
-		
-	(or (hddspeed Slow)
-		(hddspeed Medium)
-		(hddspeed Fast))	
-		
-	(or (videopower Low)
-		(videopower Medium)
-		(videopower High))	
-		
-	(or (monitor Small)
-		(monitor Medium)
-		(monitor Large))	
-		
-	(or (cooling Normal)
-		(cooling Good)
-		(cooling Extra))	
+		(hddcapacity Medium))	
+	(not (videopower Low))
+	(monitor Large)
+	(extra usb)
+	(extra hdmi)
+	(extra dvdrom)
+    =>
+    (printout t "The computer is suitable for Movies" crlf)
+    (assert (type Movies)))	
+
+;==evaluate for Business
+(defrule evaluate-for-business
+	(comptype Laptop)
+	(or (frequency  Medium)
+		(frequency  High))	
+	(not (proccount 0-1))	
+	(not (ram Low))	
+	(not (hddspeed Slow))	
+	(not (videopower Low))	
+	(extra usb)
+	(extra dvdrom)
+    =>
+    (printout t "The computer is suitable for Business" crlf)
+    (assert (type Business)))	
+
+;==evaluate Games
+(defrule evaluate-for-gaming
+	(or (comptype Laptop)
+		(comptype Desktop))	
+	(frequency  High)
+	(proccount 4+)
+	(ram High)
+	(hddcapacity High)	
+	(hddspeed Fast)
+	(videopower High)
+	(monitor Large)
+	(cooling Extra)
 	(extra usb)
 	(extra vga)
 	(extra hdmi)
 	(extra dvdrom)
     =>
-    (printout t "The computer is suitable for Docs and Internet" crlf)
-    (assert (suitable-for DocsAndInternet)))
+    (printout t "The computer is suitable for Gaming" crlf)
+    (assert (type Gaming)))
+
+;==evaluate Server
+(defrule evaluate-for-server
+	(or (comptype Rack)
+		(comptype Desktop))	
+	(frequency  High)
+	(proccount 4+)
+	(ram High)
+	(hddcapacity High)	
+	(hddspeed Fast)
+	(cooling Extra)
+	(extra usb)
+	(extra extrahdd)
+    =>
+    (printout t "The computer is suitable Server" crlf)
+    (assert (type Server)))
+	
+
+
+;==DETERMINE ADVANTAGE CHARACTERISTICS
+(defrule frequency-advantage
+    (type ?type)
+    (frequency High)
+    (test (eq ?type Movies))
+    =>
+    (assert (pros ?type frequency)))
+
+(defrule hddcapacity-advantage
+    (type ?type)
+    (hddcapacity High)
+    (test (eq ?type Business))
+    =>
+    (assert (pros ?type hddcapacity)))
+	
+(defrule hddspeed-advantage
+    (type ?type)
+    (hddspeed Fast)
+    (test (eq ?type DocsAndInternet))
+    =>
+    (assert (pros ?type hddspeed)))
+	
+(defrule monitor-advantage
+    (type ?type)
+    (monitor Large)
+    (or (test (eq ?type DocsAndInternet))
+		(test (eq ?type Business))
+	)
+    =>
+    (assert (pros ?type monitor)))	
+	
+(defrule cooling-advantage
+    (type ?type)
+
+    (or (and(test (eq ?type DocsAndInternet))
+			(test (eq cooling Good)))
+		(and(test (eq ?type Movies))
+			(test (eq cooling Good)))
+		(and(test (eq ?type Business))
+			(test (eq cooling Good)))
+	)
+    =>
+    (assert (pros ?type monitor)))	
+
+(defrule extras-advantage
+    (type ?type)
+    (extra ?extra)
+    (or (and (test (eq ?type DocsAndInternet))
+             (test (neq ?extra usb)))     	 ;this is a requirement
+        (and (test (eq ?type Movies))
+             (test (neq ?extra hdmi))		 ;this is a reuirement
+             (test (neq ?extra usb))		 ;this is a reuirement
+             (test (neq ?extra dvdrom)))     ;this is a reuirement
+        (and (test (eq ?type Business))
+             (test (neq ?extra usb))		 ;this is a reuirement
+             (test (neq ?extra dvdrom)))     ;this is a reuirement			 
+        (and (test (eq ?type Server))
+             (test (neq ?extra dvdrom))		 ;not necessary
+             (test (neq ?extra extrahdd)))   ;this is a requirement
+	)
+    =>
+    (assert (pros ?type ?extra)))
+
+;==Type symmary ryls
+(defrule no-type-summary "This is called last if no computer type was fount"
+    (declare (salience -1))
+    (all-checked)
+    (not (type DocsAndInternet))
+    (not (type Movies))
+    (not (type Business))
+    (not (type Gaming))
+    (not (type Server))
+    =>
+    (printout t "The computer is no suitable for a particular type ot operations." crlf))
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+;=====pros summary
+(defrule pros-summary
+    (pros ?type ?pros)
+    =>
+    (printout t "As a " ?type " computer, its ")
+    (printout t ?pros)
+    (printout t " is considered a pros." crlf))
 
 
 		
